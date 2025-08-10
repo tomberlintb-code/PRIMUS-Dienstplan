@@ -1,0 +1,212 @@
+/* ===== Farb- und UI-Variablen (einheitlich Login + Dashboard) ===== */
+:root {
+  /* Primärfarben */
+  --bg: #0b3d91;          /* Hintergrund (Login/Dashboard) */
+  --fg: #ffffff;          /* Standard-Textfarbe auf dunklem Grund */
+  --accent: #ffcc00;      /* Hover-Highlight auf Buttons */
+
+  /* Login-Card */
+  --card-bg: #ffffff;
+  --card-fg: #0b3d91;
+  --card-shadow: 0 8px 20px rgba(0,0,0,0.2);
+
+  /* Form */
+  --input-border: #cfd8ea;
+  --input-bg: #ffffff;
+  --btn-bg: #0b3d91;
+  --btn-fg: #ffffff;
+  --btn-bg-hover: #072d6b;
+
+  /* Dashboard Mindmap */
+  --line: rgba(255,255,255,0.85);
+  --lineFaded: rgba(255,255,255,0.38);
+  --map-btn-bg: #ffffff;
+  --map-btn-fg: #0b3d91;
+  --map-btn-shadow: 0 8px 18px rgba(0,0,0,0.25);
+}
+
+/* ===== Base ===== */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* ===== Login (Startseite) ===== */
+/* ===== Login (Startseite) ===== */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;   /* horizontal zentrieren */
+  align-items: center;       /* vertikal zentrieren */
+  background: var(--bg);
+  padding: 20px;
+}
+
+.login-card {
+  background: var(--card-bg);
+  color: var(--card-fg);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+}
+
+
+.login-logo { margin-bottom: 1rem; }
+
+.greeting {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--card-fg);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.login-form input {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  border-radius: 10px;
+  font-size: 1rem;
+  color: #1b2a4b;
+}
+
+.login-form input:focus {
+  outline: 2px solid #b5c4e6;
+  border-color: #b5c4e6;
+}
+
+.login-form button {
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: none;
+  padding: 0.8rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.08s ease;
+}
+
+.login-form button:hover { background: var(--btn-bg-hover); }
+.login-form button:active { transform: translateY(1px); }
+
+.error-msg {
+  color: #b00020;
+  font-size: 0.9rem;
+}
+
+/* ===== Dashboard Mindmap ===== */
+.dashboard-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: var(--bg);   /* gleich wie Login */
+  overflow: hidden;
+}
+
+/* Logo mittig, immer obenauf */
+.center-logo {
+  position: fixed;          /* fix, nicht mitscrollen */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;              /* über Linien & Buttons */
+}
+
+.logo-image {
+  border-radius: 50%;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+
+/* Buttons-Ebene */
+.buttons-layer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 9; /* unter dem Logo, über den Linien */
+}
+
+/* Button-Stil (Mindmap) */
+.map-button {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: var(--map-btn-bg);
+  color: var(--map-btn-fg);
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--map-btn-shadow);
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease, background-color .2s ease;
+}
+
+.map-button:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  background: var(--accent);
+  color: #1d1a00; /* bessere Lesbarkeit auf Gelb */
+}
+
+.map-button.faded {
+  opacity: 0.45;
+  filter: saturate(0.7);
+}
+
+.icon { font-size: 1.4rem; line-height: 1; }
+.label { font-size: 0.95rem; }
+
+/* Linien (hinter allem außer Hintergrund) */
+.lines-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1; /* hinter Buttons & Logo */
+}
+
+.map-line {
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.map-line.faded { stroke: var(--lineFaded); }
+
+/* Linien-Animation (wird über key={animTick} neu gestartet) */
+.animate {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: drawLine 0.9s ease-out forwards;
+}
+
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ===== Responsive (Handy) – Buttons kompakter, nur Icons ===== */
+@media (max-width: 768px) {
+  .map-button {
+    padding: 12px;
+    gap: 0;
+    min-width: 56px;
+    min-height: 56px;
+    justify-content: center;
+  }
+  .label { display: none; }
+  .icon { font-size: 1.6rem; }
+}

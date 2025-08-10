@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Farben & Grundlayout */
+:root {
+  --bg: #0b3d91;   /* Blau */
+  --fg: #ffffff;   /* Weiß */
+  --accent: #ffcc00; /* Gelb als Akzent */
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  min-height: 100vh;
+}
+
+/* ===== Login ===== */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-card {
+  background: #ffffff;
+  color: #0b3d91;
+  max-width: 380px;
+  width: 100%;
+  padding: 28px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  text-align: center;
+}
+
+.login-logo { margin-bottom: 16px; }
+.greeting { margin: 0 0 14px; font-size: 1.4rem; font-weight: 800; }
+
+.login-form { display: flex; flex-direction: column; gap: 10px; }
+.login-form input {
+  padding: 10px 12px;
+  border: 1px solid #cfd8ea;
+  border-radius: 10px;
+  font-size: 1rem;
+  color: #1b2a4b;
+  background: #fff;
+}
+.login-form input:focus { outline: 2px solid #b5c4e6; border-color: #b5c4e6; }
+.login-form button {
+  background: #0b3d91;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .2s ease, transform .06s ease;
+}
+.login-form button:hover { background: #0a2f73; }
+.login-form button:active { transform: translateY(1px); }
+.error-msg { color: #b00020; font-size: .95rem; margin-top: 8px; }
+
+/* ===== Dashboard (Mindmap) ===== */
+.dashboard-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* Linien unter allem außer Hintergrund */
+.lines-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+.map-line {
+  stroke: rgba(255,255,255,0.85);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.map-line.faded { stroke: rgba(255,255,255,0.38); }
+.animate { stroke-dasharray: 600; stroke-dashoffset: 600; animation: drawLine 0.9s ease-out forwards; }
+@keyframes drawLine { to { stroke-dashoffset: 0; } }
+
+/* Logo mittig, über den Linien */
+.center-logo {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+.logo-image { border-radius: 50%; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+
+/* Buttons-Schicht über den Linien, unter dem Logo */
+.buttons-layer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 9;
+}
+
+/* Buttons */
+.map-button {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: #ffffff;
+  color: #0b3d91;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 800;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease, background-color .2s ease;
+}
+.map-button:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  background: var(--accent);
+  color: #1d1a00;
+}
+.map-button.faded { opacity: .45; filter: saturate(.7); }
+.icon { font-size: 1.4rem; line-height: 1; }
+.label { font-size: .95rem; }
+
+/* Mobile: Buttons kompakter, nur Icons */
+@media (max-width: 768px) {
+  .map-button { padding: 12px; gap: 0; min-width: 56px; min-height: 56px; justify-content: center; }
+  .label { display: none; }
+  .icon { font-size: 1.6rem; }
+}

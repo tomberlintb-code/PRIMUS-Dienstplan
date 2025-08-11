@@ -1,8 +1,8 @@
+// src/app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 
@@ -15,6 +15,7 @@ const BUTTONS: Btn[] = [
   { id: "logout",   label: "Logout",     href: "#", color: "#DC2626", icon: "⏻" },
 ];
 
+// „ungeordnete“ Grundpositionen in %
 const POS = [
   { top: 14, left: 22 },
   { top: 22, left: 70 },
@@ -23,24 +24,40 @@ const POS = [
   { top: 42, left: 86 },
 ];
 
-type P = { d: string };
+type PathDesc = { d: string };
 
 export default function DashboardPage() {
-  const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const logoRef = useRef<HTMLDivElement | null>(null);
   const btnRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const [paths, setPaths] = useState<P[]>([]);
+  const [paths, setPaths] = useState<PathDesc[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
 
-  // Bezierpfad (JETZT bis zum Button, keine Kürzung)
+  // robuster Logout mit hartem Reload → Login wie beim Kaltstart
+  const handleLogout = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    try {
+      await signOut(auth);
+    } catch {
+      /* ignore */
+    } finally {
+      try {
+        sessionStorage.clear();
+        localStorage.clear();
+      } catch {}
+      // Zielroute: Root oder /login – nimm die, die du beim App-Start verwendest
+      window.location.replace("/"); // ggf. auf "/login" ändern
+    }
+  };
+
+  // Bezierpfad (bis zum Button)
   const makePath = (ax: number, ay: number, bx: number, by: number): string => {
     const cx = (ax + bx) / 2;
-    const cy = (ay + by) / 2 - 40;
+    const cy = (ay + by) / 2 - 40; // leichter Schwung
     return `M ${ax} ${ay} Q ${cx} ${cy}, ${bx} ${by}`;
   };
 
-  // Pfade aus realen DOM-Positionen berechnen
+  // Pfade anhand realer DOM-Positionen berechnen
   const compute = () => {
     const cont = containerRef.current, logo = logoRef.current;
     if (!cont || !logo) return;
@@ -50,7 +67,7 @@ export default function DashboardPage() {
     const aX = L.left - c.left + L.width / 2;
     const aY = L.top  - c.top  + L.height / 2;
 
-    const newPaths: P[] = [];
+    const newPaths: PathDesc[] = [];
     btnRefs.current.forEach((el) => {
       if (!el) return;
       const b = el.getBoundingClientRect();
@@ -74,18 +91,9 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const handleLogout = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    try {
-      await signOut(auth);
-    } finally {
-      router.replace("/login");
-    }
-  };
-
   return (
     <div ref={containerRef} style={styles.container}>
-      {/* rundes, langsamer pulsierendes Logo */}
+      {/* rundes, langsam pulsierendes Logo */}
       <motion.div
         ref={logoRef}
         style={styles.logoWrap}
@@ -95,7 +103,7 @@ export default function DashboardPage() {
         <img src="/logo.png" alt="Logo" style={styles.logoImg} />
       </motion.div>
 
-      {/* Buttons (Icon + Text) */}
+      {/* Buttons (Icon + Text, farbig) */}
       {BUTTONS.map((btn, i) => (
         <a
           key={btn.id}
@@ -118,7 +126,7 @@ export default function DashboardPage() {
         </a>
       ))}
 
-      {/* Weiße Bezierkurven – nacheinander bis zum Button */}
+      {/* Weiße Bezierkurven – nacheinander bis zu den Buttons */}
       <svg style={styles.svg} width="100%" height="100%">
         {paths.map((p, i) => (
           <motion.path
@@ -149,7 +157,7 @@ const styles: Record<string, React.CSSProperties> = {
     position: "relative",
     width: "100%",
     height: "100vh",
-    background: "#0E3A8A",
+    background: "#0E3A8A", // sattes Blau
     overflow: "hidden",
   },
   logoWrap: {

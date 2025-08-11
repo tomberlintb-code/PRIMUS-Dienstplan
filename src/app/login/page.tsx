@@ -1,101 +1,82 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { signInWithEmailAndPassword, onAuthStateChanged, User } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [initializing, setInitializing] = useState(true); // Warten bis Auth-Status sicher ist
+  const [error, setError] = useState("");
 
-  // Wenn schon eingeloggt, direkt aufs Dashboard – aber erst NACHDEM Firebase im Browser bereit ist
+  // Auth-Check beim Start
   useEffect(() => {
-    // Falls im Serverkontext: nichts tun
-    if (typeof window === "undefined") return;
-
-    // auth ist im Serverkontext null (durch unseren Guard in firebase.ts)
-    if (!(auth as any)) {
-      setInitializing(false);
-      return;
-    }
-
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        router.replace("/dashboard");
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+      if (currentUser) {
+        router.push("/dashboard");
       }
-      setInitializing(false);
     });
-    return () => unsub();
+    return () => unsubscribe();
   }, [router]);
 
-  async function onSubmit(e: React.FormEvent) {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSubmitting(true);
+    setError("");
     try {
-      if (!(auth as any)) {
-        setError("Clientinitialisierung läuft. Bitte kurz erneut versuchen.");
-        return;
-      }
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace("/dashboard");
+      router.push("/dashboard");
     } catch (err: any) {
-      setError(err?.code || "Anmeldung fehlgeschlagen");
-    } finally {
-      setSubmitting(false);
+      setError(err.message);
     }
-  }
+  };
 
-  if (initializing) {
+  if (loading) {
     return (
-      <main className="min-h-dvh grid place-items-center">
-        <div>Lade …</div>
-      </main>
+      <div className="flex h-screen items-center justify-center bg-blue-900 text-white text-lg">
+        Lade Benutzerstatus...
+      </div>
     );
   }
 
+  if (user) {
+    return null; // falls schon eingeloggt → kein Formular mehr rendern
+  }
+
   return (
-    <main className="min-h-dvh grid place-items-center p-6">
-      <div className="w-full max-w-sm rounded-xl border p-6 shadow-sm bg-white/90">
-        <h2 className="text-xl font-semibold text-center mb-4">Anmeldung</h2>
-        <form onSubmit={onSubmit}>
-          <input
-            className="w-full mb-3 border rounded px-3 py-2"
-            type="email"
-            placeholder="E-Mail"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-          <input
-            className="w-full mb-3 border rounded px-3 py-2"
-            type="password"
-            placeholder="Passwort"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-          <button
-            className="w-full border rounded px-4 py-2"
-            type="submit"
-            disabled={submitting}
-          >
-            {submitting ? "Prüfe …" : "Einloggen"}
-          </button>
-          {error && (
-            <div className="mt-3 text-sm text-red-600" role="alert">
-              {error}
-            </div>
-          )}
-        </form>
-      </div>
-    </main>
+    <div className="flex h-screen items-center justify-center bg-blue-900">
+      <form
+        onSubmit={handleLogin}
+        className="bg-white p-6 rounded-lg shadow-lg w-80"
+      >
+        <h1 className="text-xl font-bold mb-4">Login</h1>
+        {error && <p className="text-red-500 mb-2">{error}</p>}
+        <input
+          type="email"
+          placeholder="E-Mail"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="border p-2 w-full mb-3"
+        />
+        <input
+          type="password"
+          placeholder="Passwort"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="border p-2 w-full mb-3"
+        />
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded w-full"
+        >
+          Einloggen
+        </button>
+      </form>
+    </div>
   );
 }

@@ -54,7 +54,7 @@ export default function DashboardPage() {
         {buttons.map((btn, i) => (
           <a
             key={btn.id}
-            ref={(el) => (btnRefs.current[i] = el)}
+            ref={(el) => { btnRefs.current[i] = el; }}
             href={btn.href}
             className="px-4 py-3 rounded-xl border text-center hover:bg-blue-700"
           >

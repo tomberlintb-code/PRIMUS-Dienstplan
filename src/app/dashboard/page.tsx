@@ -1,19 +1,18 @@
-// src/app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
-type Btn = { id: string; label: string; href: string };
+type Btn = { id: string; label: string; href: string; color: string; icon: string };
 const BUTTONS: Btn[] = [
-  { id: "dienst",   label: "Dienstplan", href: "#" },
-  { id: "urlaub",   label: "Urlaub",     href: "#" },
-  { id: "personal", label: "Personal",   href: "#" },
-  { id: "archiv",   label: "Archiv",     href: "#" },
-  { id: "logout",   label: "Logout",     href: "#" },
+  { id: "dienst",   label: "Dienstplan", href: "#", color: "#2563EB", icon: "📅" },
+  { id: "urlaub",   label: "Urlaub",     href: "#", color: "#059669", icon: "🏖️" },
+  { id: "personal", label: "Personal",   href: "#", color: "#7C3AED", icon: "👥" },
+  { id: "archiv",   label: "Archiv",     href: "#", color: "#D97706", icon: "📦" },
+  { id: "logout",   label: "Logout",     href: "#", color: "#DC2626", icon: "⏻" },
 ];
 
-// feste „ungeordnete“ Grundpositionen in %
+// „ungeordnete“ Grundpositionen in %
 const POS = [
   { top: 14, left: 22 },
   { top: 22, left: 70 },
@@ -31,14 +30,18 @@ export default function DashboardPage() {
   const [paths, setPaths] = useState<P[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
 
-  // Bezier von A(logo) nach B(button) als Path "M ... Q ... , ..."
+  // Bezierpfad (20% kürzer zum Button hin)
   const makePath = (ax: number, ay: number, bx: number, by: number): string => {
-    const cx = (ax + bx) / 2;
-    const cy = (ay + by) / 2 - 40; // Schwung nach oben
-    return `M ${ax} ${ay} Q ${cx} ${cy}, ${bx} ${by}`;
+    // Endpunkt 20% Richtung Zentrum ziehen
+    const sx = ax + (bx - ax) * 0.8;
+    const sy = ay + (by - ay) * 0.8;
+
+    const cx = (ax + sx) / 2;
+    const cy = (ay + sy) / 2 - 40; // leichter Schwung nach oben
+    return `M ${ax} ${ay} Q ${cx} ${cy}, ${sx} ${sy}`;
   };
 
-  // Nach Layout berechnen, wenn Größen feststehen
+  // Pfade aus realen DOM-Positionen berechnen
   const compute = () => {
     const cont = containerRef.current, logo = logoRef.current;
     if (!cont || !logo) return;
@@ -74,17 +77,17 @@ export default function DashboardPage() {
 
   return (
     <div ref={containerRef} style={styles.container}>
-      {/* Pulsierendes Logo, exakt zentriert */}
+      {/* rundes, pulsierendes Logo (langsamer) */}
       <motion.div
         ref={logoRef}
         style={styles.logoWrap}
-        animate={{ scale: [1, 1.06, 1] }}
-        transition={{ duration: 1.6, repeat: Infinity }}
+        animate={{ scale: [1, 1.04, 1] }}
+        transition={{ duration: 2.6, repeat: Infinity }} // langsamer Puls
       >
         <img src="/logo.png" alt="Logo" style={styles.logoImg} />
       </motion.div>
 
-      {/* Buttons ungeordnet im Raum */}
+      {/* Buttons (Icon + Text, farbig) */}
       {BUTTONS.map((btn, i) => (
         <a
           key={btn.id}
@@ -94,17 +97,19 @@ export default function DashboardPage() {
             ...styles.btn,
             top: `${POS[i].top}%`,
             left: `${POS[i].left}%`,
+            background: btn.color,
             opacity: hovered === null || hovered === btn.id ? 1 : 0.35,
-            filter: hovered === null || hovered === btn.id ? "none" : "grayscale(70%)",
+            filter: hovered === null || hovered === btn.id ? "none" : "grayscale(60%)",
           }}
           onMouseEnter={() => setHovered(btn.id)}
           onMouseLeave={() => setHovered(null)}
         >
-          {btn.label}
+          <span style={styles.icon}>{btn.icon}</span>
+          <span>{btn.label}</span>
         </a>
       ))}
 
-      {/* Weiße Bezierkurven – nacheinander zeichnen */}
+      {/* Weiße Bezierkurven – nacheinander */}
       <svg style={styles.svg} width="100%" height="100%">
         {paths.map((p, i) => (
           <motion.path
@@ -113,7 +118,7 @@ export default function DashboardPage() {
             fill="none"
             stroke="white"
             strokeWidth={3}
-            strokeOpacity={0.85}
+            strokeOpacity={0.9}
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 0.9, delay: i * 0.35, ease: "easeOut" }}
@@ -121,9 +126,8 @@ export default function DashboardPage() {
         ))}
       </svg>
 
-      {/* Lokale Styles für Text/Links */}
       <style jsx>{`
-        a { text-decoration: none; color: #0b1a3a; }
+        a { text-decoration: none; color: #fff; }
         a:hover { text-decoration: none; }
       `}</style>
     </div>
@@ -135,7 +139,7 @@ const styles: Record<string, React.CSSProperties> = {
     position: "relative",
     width: "100%",
     height: "100vh",
-    background: "#0E3A8A", // sattes Blau
+    background: "#0E3A8A",
     overflow: "hidden",
   },
   logoWrap: {
@@ -148,22 +152,26 @@ const styles: Record<string, React.CSSProperties> = {
   logoImg: {
     width: 140,
     height: 140,
-    objectFit: "contain",
-    filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.35))",
+    objectFit: "cover",
+    borderRadius: "50%", // rund
+    background: "#fff",
+    boxShadow: "0 8px 18px rgba(0,0,0,0.35)",
   },
   btn: {
     position: "absolute",
     zIndex: 4,
-    padding: "10px 14px",
-    borderRadius: 12,
-    background: "rgba(255,255,255,0.9)",
-    boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
+    padding: "12px 16px",
+    borderRadius: 14,
+    boxShadow: "0 8px 18px rgba(0,0,0,0.25)",
     transform: "translate(-50%, -50%)",
     fontWeight: 700,
-    whiteSpace: "nowrap",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
     userSelect: "none",
     cursor: "pointer",
   },
+  icon: { fontSize: 18, lineHeight: 1 },
   svg: {
     position: "absolute",
     inset: 0,

@@ -6,6 +6,9 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import Image from "next/image";
 
+// …dein restlicher Code bleibt unverändert
+
+
 type Btn = { id: number; label: string; icon: string; path?: string };
 type Line = { x1: number; y1: number; x2: number; y2: number; id: number };
 

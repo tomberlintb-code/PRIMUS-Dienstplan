@@ -1,9 +1,12 @@
-'use client';
-export const dynamic = 'force-dynamic';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../lib/firebase";
+
+// …dein restlicher Code bleibt unverändert
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState(''), [password, setPassword] = useState('');

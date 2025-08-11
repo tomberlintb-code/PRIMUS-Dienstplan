@@ -1,110 +1,173 @@
+// src/app/dashboard/page.tsx
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import Image from "next/image";
-import { useState } from "react";
 
-export default function Dashboard() {
-  const [hovered, setHovered] = useState<number | null>(null);
+type Btn = { id: string; label: string; href: string };
+const BUTTONS: Btn[] = [
+  { id: "dienst",   label: "Dienstplan", href: "#" },
+  { id: "urlaub",   label: "Urlaub",     href: "#" },
+  { id: "personal", label: "Personal",   href: "#" },
+  { id: "archiv",   label: "Archiv",     href: "#" },
+  { id: "logout",   label: "Logout",     href: "#" },
+];
 
-  const buttons = [
-    { id: 1, label: "Dienstplan", href: "#" },
-    { id: 2, label: "Urlaub", href: "#" },
-    { id: 3, label: "Personal", href: "#" },
-    { id: 4, label: "Archiv", href: "#" },
-    { id: 5, label: "Logout", href: "#" },
-  ];
+// feste „ungeordnete“ Grundpositionen in %
+const POS = [
+  { top: 14, left: 22 },
+  { top: 22, left: 70 },
+  { top: 68, left: 18 },
+  { top: 76, left: 72 },
+  { top: 42, left: 86 },
+];
 
-  // Positionen im "Brainstorming"-Stil (responsive in %)
-  const positions = [
-    { top: "10%", left: "60%" },
-    { top: "20%", left: "20%" },
-    { top: "70%", left: "15%" },
-    { top: "75%", left: "70%" },
-    { top: "40%", left: "85%" },
-  ];
+type P = { d: string };
 
-  // Funktion für Bezierpfade (vom Zentrum zur Button-Position)
-  const getBezierPath = (targetLeft: string, targetTop: string) => {
-    const centerX = 50; // %
-    const centerY = 50; // %
-    const targetX = parseFloat(targetLeft);
-    const targetY = parseFloat(targetTop);
+export default function DashboardPage() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const logoRef = useRef<HTMLDivElement | null>(null);
+  const btnRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [paths, setPaths] = useState<P[]>([]);
+  const [hovered, setHovered] = useState<string | null>(null);
 
-    // Kontrollpunkte für schöne Kurven
-    const controlX = (centerX + targetX) / 2;
-    const controlY = (centerY + targetY) / 2 - 15; // leicht nach oben versetzt
-
-    return `M ${centerX} ${centerY} Q ${controlX} ${controlY}, ${targetX} ${targetY}`;
+  // Bezier von A(logo) nach B(button) als Path "M ... Q ... , ..."
+  const makePath = (ax: number, ay: number, bx: number, by: number): string => {
+    const cx = (ax + bx) / 2;
+    const cy = (ay + by) / 2 - 40; // Schwung nach oben
+    return `M ${ax} ${ay} Q ${cx} ${cy}, ${bx} ${by}`;
   };
 
+  // Nach Layout berechnen, wenn Größen feststehen
+  const compute = () => {
+    const cont = containerRef.current, logo = logoRef.current;
+    if (!cont || !logo) return;
+
+    const c = cont.getBoundingClientRect();
+    const L = logo.getBoundingClientRect();
+    const aX = L.left - c.left + L.width / 2;
+    const aY = L.top  - c.top  + L.height / 2;
+
+    const newPaths: P[] = [];
+    btnRefs.current.forEach((el) => {
+      if (!el) return;
+      const b = el.getBoundingClientRect();
+      const bX = b.left - c.left + b.width / 2;
+      const bY = b.top  - c.top  + b.height / 2;
+      newPaths.push({ d: makePath(aX, aY, bX, bY) });
+    });
+    setPaths(newPaths);
+  };
+
+  useEffect(() => {
+    compute();
+    const ro = new ResizeObserver(() => compute());
+    if (containerRef.current) ro.observe(containerRef.current);
+    window.addEventListener("resize", compute, { passive: true });
+    window.addEventListener("scroll", compute, { passive: true });
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("scroll", compute);
+    };
+  }, []);
+
   return (
-    <div className="relative w-full h-screen bg-gray-100 overflow-hidden">
-      {/* Logo mit Herzschlag */}
+    <div ref={containerRef} style={styles.container}>
+      {/* Pulsierendes Logo, exakt zentriert */}
       <motion.div
-        className="absolute z-20"
-        style={{
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-        }}
-        animate={{
-          scale: [1, 1.05, 1],
-        }}
-        transition={{
-          repeat: Infinity,
-          duration: 1.5,
-        }}
+        ref={logoRef}
+        style={styles.logoWrap}
+        animate={{ scale: [1, 1.06, 1] }}
+        transition={{ duration: 1.6, repeat: Infinity }}
       >
-        <Image src="/logo.png" alt="Logo" width={150} height={150} />
+        <img src="/logo.png" alt="Logo" style={styles.logoImg} />
       </motion.div>
 
-      {/* Buttons */}
-      {buttons.map((btn, i) => (
-        <motion.a
+      {/* Buttons ungeordnet im Raum */}
+      {BUTTONS.map((btn, i) => (
+        <a
           key={btn.id}
+          ref={(el) => { btnRefs.current[i] = el; }}
           href={btn.href}
-          className={`absolute z-10 px-4 py-2 rounded-lg shadow-lg text-white text-lg font-semibold transition-all duration-300 ${
-            hovered === null || hovered === btn.id
-              ? "bg-blue-500"
-              : "bg-gray-400 opacity-50"
-          }`}
-          style={positions[i]}
+          style={{
+            ...styles.btn,
+            top: `${POS[i].top}%`,
+            left: `${POS[i].left}%`,
+            opacity: hovered === null || hovered === btn.id ? 1 : 0.35,
+            filter: hovered === null || hovered === btn.id ? "none" : "grayscale(70%)",
+          }}
           onMouseEnter={() => setHovered(btn.id)}
           onMouseLeave={() => setHovered(null)}
-          whileHover={{
-            scale: 1.1,
-            boxShadow: "0 0 20px rgba(0,0,255,0.6)",
-          }}
-          whileTap={{ scale: 0.95 }}
         >
           {btn.label}
-        </motion.a>
+        </a>
       ))}
 
-      {/* Kurvige Linien-Animation */}
-      <svg
-        className="absolute top-0 left-0 w-full h-full z-0"
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-      >
-        {positions.map((pos, i) => (
+      {/* Weiße Bezierkurven – nacheinander zeichnen */}
+      <svg style={styles.svg} width="100%" height="100%">
+        {paths.map((p, i) => (
           <motion.path
             key={i}
-            d={getBezierPath(pos.left, pos.top)}
-            fill="transparent"
-            stroke="blue"
-            strokeWidth="0.5"
+            d={p.d}
+            fill="none"
+            stroke="white"
+            strokeWidth={3}
+            strokeOpacity={0.85}
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
-            transition={{
-              duration: 1,
-              delay: i * 0.5,
-            }}
+            transition={{ duration: 0.9, delay: i * 0.35, ease: "easeOut" }}
           />
         ))}
       </svg>
+
+      {/* Lokale Styles für Text/Links */}
+      <style jsx>{`
+        a { text-decoration: none; color: #0b1a3a; }
+        a:hover { text-decoration: none; }
+      `}</style>
     </div>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    position: "relative",
+    width: "100%",
+    height: "100vh",
+    background: "#0E3A8A", // sattes Blau
+    overflow: "hidden",
+  },
+  logoWrap: {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform: "translate(-50%, -50%)",
+    zIndex: 3,
+  },
+  logoImg: {
+    width: 140,
+    height: 140,
+    objectFit: "contain",
+    filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.35))",
+  },
+  btn: {
+    position: "absolute",
+    zIndex: 4,
+    padding: "10px 14px",
+    borderRadius: 12,
+    background: "rgba(255,255,255,0.9)",
+    boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
+    transform: "translate(-50%, -50%)",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+    userSelect: "none",
+    cursor: "pointer",
+  },
+  svg: {
+    position: "absolute",
+    inset: 0,
+    zIndex: 2,
+    pointerEvents: "none",
+  },
+};

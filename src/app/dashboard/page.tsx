@@ -18,14 +18,14 @@ export default function DashboardPage() {
   const router = useRouter();
   const [initializing, setInitializing] = useState(true);
   const [uid, setUid] = useState<string | null>(null);
-  const btnRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const btnRefs = useRef<Array<HTMLAnchorElement | null>>([]); // <-- angepasst
 
-  // Auth-Check: nur im Client; erst nach onAuthStateChanged entscheiden
+  // Auth-Check nur im Client; erst nach onAuthStateChanged entscheiden
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     if (!(auth as any)) {
-      // Falls aus irgendeinem Grund noch nicht da, nicht redirecten
+      // Falls Firebase im Client noch nicht bereit ist: Seite anzeigen, aber nicht redirecten
       setInitializing(false);
       return;
     }

@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
+import { auth } from "../../lib/firebase";
 
 type Btn = { id: string; label: string; href: string; color: string; icon: string };
 const BUTTONS: Btn[] = [
@@ -12,7 +15,6 @@ const BUTTONS: Btn[] = [
   { id: "logout",   label: "Logout",     href: "#", color: "#DC2626", icon: "⏻" },
 ];
 
-// „ungeordnete“ Grundpositionen in %
 const POS = [
   { top: 14, left: 22 },
   { top: 22, left: 70 },
@@ -24,21 +26,18 @@ const POS = [
 type P = { d: string };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const logoRef = useRef<HTMLDivElement | null>(null);
   const btnRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [paths, setPaths] = useState<P[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
 
-  // Bezierpfad (20% kürzer zum Button hin)
+  // Bezierpfad (JETZT bis zum Button, keine Kürzung)
   const makePath = (ax: number, ay: number, bx: number, by: number): string => {
-    // Endpunkt 20% Richtung Zentrum ziehen
-    const sx = ax + (bx - ax) * 0.8;
-    const sy = ay + (by - ay) * 0.8;
-
-    const cx = (ax + sx) / 2;
-    const cy = (ay + sy) / 2 - 40; // leichter Schwung nach oben
-    return `M ${ax} ${ay} Q ${cx} ${cy}, ${sx} ${sy}`;
+    const cx = (ax + bx) / 2;
+    const cy = (ay + by) / 2 - 40;
+    return `M ${ax} ${ay} Q ${cx} ${cy}, ${bx} ${by}`;
   };
 
   // Pfade aus realen DOM-Positionen berechnen
@@ -75,24 +74,34 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      await signOut(auth);
+    } finally {
+      router.replace("/login");
+    }
+  };
+
   return (
     <div ref={containerRef} style={styles.container}>
-      {/* rundes, pulsierendes Logo (langsamer) */}
+      {/* rundes, langsamer pulsierendes Logo */}
       <motion.div
         ref={logoRef}
         style={styles.logoWrap}
         animate={{ scale: [1, 1.04, 1] }}
-        transition={{ duration: 2.6, repeat: Infinity }} // langsamer Puls
+        transition={{ duration: 2.6, repeat: Infinity }}
       >
         <img src="/logo.png" alt="Logo" style={styles.logoImg} />
       </motion.div>
 
-      {/* Buttons (Icon + Text, farbig) */}
+      {/* Buttons (Icon + Text) */}
       {BUTTONS.map((btn, i) => (
         <a
           key={btn.id}
           ref={(el) => { btnRefs.current[i] = el; }}
           href={btn.href}
+          onClick={btn.id === "logout" ? handleLogout : undefined}
           style={{
             ...styles.btn,
             top: `${POS[i].top}%`,
@@ -109,7 +118,7 @@ export default function DashboardPage() {
         </a>
       ))}
 
-      {/* Weiße Bezierkurven – nacheinander */}
+      {/* Weiße Bezierkurven – nacheinander bis zum Button */}
       <svg style={styles.svg} width="100%" height="100%">
         {paths.map((p, i) => (
           <motion.path
@@ -118,7 +127,8 @@ export default function DashboardPage() {
             fill="none"
             stroke="white"
             strokeWidth={3}
-            strokeOpacity={0.9}
+            strokeOpacity={0.95}
+            strokeLinecap="round"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 0.9, delay: i * 0.35, ease: "easeOut" }}

@@ -1,6 +1,4 @@
 "use client";
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -204,7 +202,7 @@ export default function DashboardPage() {
           return (
             <button
               key={btn.id}
-              ref={(el) => (btnRefs.current[i] = el)}
+              ref={(el) => { btnRefs.current[i] = el; }}
               className={`map-button ${faded}`}
               style={{ top: positions[i].top, left: positions[i].left }}
               onMouseEnter={() => setHovered(btn.id)}

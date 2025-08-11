@@ -1,6 +1,6 @@
 # Primus Login – Minimal (Next.js + Firebase Auth)
 
-**Ziel:** Ein minimaler, sauberer Login‑Flow: Splash → Login → Dashboard. Ohne Firestore, ohne Server‑Action‑Magie.
+**Ziel:** Ein minimaler, sauberer Login‑Flow: Splash → Login → Dashboard. Ohne Firestore, ohne Server‑Action‑Magie. test
 
 ## Setup (lokal)
 1. Node.js 18+ installieren.

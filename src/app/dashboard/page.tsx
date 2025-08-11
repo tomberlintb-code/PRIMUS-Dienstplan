@@ -1,73 +1,110 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { motion } from "framer-motion";
+import Image from "next/image";
+import { useState } from "react";
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const btnRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-
-  // Auth-Check
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-      if (!currentUser) {
-        router.push("/login");
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-blue-900 text-white text-lg">
-        Dashboard wird geladen...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null; // nicht eingeloggt → nichts anzeigen
-  }
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/login");
-  };
+export default function Dashboard() {
+  const [hovered, setHovered] = useState<number | null>(null);
 
   const buttons = [
-    { id: "dienst", label: "Dienst/Urlaub", href: "#" },
-    { id: "personal", label: "Personalabteilung", href: "#" },
-    { id: "config", label: "Konfiguration", href: "#" },
-    { id: "archiv", label: "Archiv", href: "#" },
+    { id: 1, label: "Dienstplan", href: "#" },
+    { id: 2, label: "Urlaub", href: "#" },
+    { id: 3, label: "Personal", href: "#" },
+    { id: 4, label: "Archiv", href: "#" },
+    { id: 5, label: "Logout", href: "#" },
   ];
 
+  // Positionen im "Brainstorming"-Stil (responsive in %)
+  const positions = [
+    { top: "10%", left: "60%" },
+    { top: "20%", left: "20%" },
+    { top: "70%", left: "15%" },
+    { top: "75%", left: "70%" },
+    { top: "40%", left: "85%" },
+  ];
+
+  // Funktion für Bezierpfade (vom Zentrum zur Button-Position)
+  const getBezierPath = (targetLeft: string, targetTop: string) => {
+    const centerX = 50; // %
+    const centerY = 50; // %
+    const targetX = parseFloat(targetLeft);
+    const targetY = parseFloat(targetTop);
+
+    // Kontrollpunkte für schöne Kurven
+    const controlX = (centerX + targetX) / 2;
+    const controlY = (centerY + targetY) / 2 - 15; // leicht nach oben versetzt
+
+    return `M ${centerX} ${centerY} Q ${controlX} ${controlY}, ${targetX} ${targetY}`;
+  };
+
   return (
-    <div className="min-h-screen bg-blue-900 text-white p-6">
-      <h1 className="text-2xl font-bold mb-6">Willkommen, {user.email}</h1>
-      <div className="grid grid-cols-2 gap-4">
-        {buttons.map((btn, i) => (
-          <a
-            key={btn.id}
-            ref={(el) => { btnRefs.current[i] = el; }}
-            href={btn.href}
-            className="px-4 py-3 rounded-xl border text-center hover:bg-blue-700"
-          >
-            {btn.label}
-          </a>
-        ))}
-      </div>
-      <button
-        onClick={handleLogout}
-        className="mt-6 bg-red-500 px-4 py-2 rounded"
+    <div className="relative w-full h-screen bg-gray-100 overflow-hidden">
+      {/* Logo mit Herzschlag */}
+      <motion.div
+        className="absolute z-20"
+        style={{
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+        }}
+        animate={{
+          scale: [1, 1.05, 1],
+        }}
+        transition={{
+          repeat: Infinity,
+          duration: 1.5,
+        }}
       >
-        Logout
-      </button>
+        <Image src="/logo.png" alt="Logo" width={150} height={150} />
+      </motion.div>
+
+      {/* Buttons */}
+      {buttons.map((btn, i) => (
+        <motion.a
+          key={btn.id}
+          href={btn.href}
+          className={`absolute z-10 px-4 py-2 rounded-lg shadow-lg text-white text-lg font-semibold transition-all duration-300 ${
+            hovered === null || hovered === btn.id
+              ? "bg-blue-500"
+              : "bg-gray-400 opacity-50"
+          }`}
+          style={positions[i]}
+          onMouseEnter={() => setHovered(btn.id)}
+          onMouseLeave={() => setHovered(null)}
+          whileHover={{
+            scale: 1.1,
+            boxShadow: "0 0 20px rgba(0,0,255,0.6)",
+          }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {btn.label}
+        </motion.a>
+      ))}
+
+      {/* Kurvige Linien-Animation */}
+      <svg
+        className="absolute top-0 left-0 w-full h-full z-0"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
+        {positions.map((pos, i) => (
+          <motion.path
+            key={i}
+            d={getBezierPath(pos.left, pos.top)}
+            fill="transparent"
+            stroke="blue"
+            strokeWidth="0.5"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{
+              duration: 1,
+              delay: i * 0.5,
+            }}
+          />
+        ))}
+      </svg>
     </div>
   );
 }

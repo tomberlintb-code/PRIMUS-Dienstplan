@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { signOut, onAuthStateChanged, User } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
@@ -48,10 +48,16 @@ function getGreetingByDaypart(): string {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const debug = searchParams.get("debug") === "1";
-
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Debug-Flag (statt useSearchParams)
+  const [debug, setDebug] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const usp = new URLSearchParams(window.location.search);
+      setDebug(usp.get("debug") === "1");
+    }
+  }, []);
 
   // Rolle + Name
   const [role, setRole] = useState<Role>("personal");
@@ -121,7 +127,7 @@ export default function DashboardPage() {
         color: "#111827",
         icon: <span aria-hidden>🚪</span>,
         angleDeg: -155,
-        visibleFor: ["personal", "disp", "admin"], // Logout für alle Rollen sichtbar
+        visibleFor: ["personal", "disp", "admin"], // Logout für alle sichtbar
         onClick: async () => {
           await signOut(auth);
           router.replace("/");
@@ -241,11 +247,10 @@ export default function DashboardPage() {
     return () => window.clearInterval(timer);
   }, [geo, animateOnce, buttons.length]);
 
-  const dayGreeting = getGreetingByDaypart();
   const fullGreeting =
     displayName && displayName.trim().length > 0
-      ? `${dayGreeting}, ${displayName}!`
-      : dayGreeting;
+      ? `${getGreetingByDaypart()}, ${displayName}!`
+      : getGreetingByDaypart();
 
   // Klick: andere Buttons ausblenden, dann navigieren
   function handleClick(i: number, b: Btn) {
@@ -258,7 +263,7 @@ export default function DashboardPage() {
     window.setTimeout(go, 420);
   }
 
-  // ---- NEU: Render erst, wenn Geo und Buttons synchron sind ----
+  // Render erst, wenn Geo & Buttons synchron sind (Race-Condition-Fix)
   const geoReady = !!geo && geo.targets.length === buttons.length;
 
   return (
@@ -376,16 +381,14 @@ export default function DashboardPage() {
             textAlign: "center",
           }}
         >
-          {displayName && displayName.trim().length > 0
-            ? `${getGreetingByDaypart()}, ${displayName}!`
-            : getGreetingByDaypart()}
+          {fullGreeting}
         </div>
       )}
 
       {/* Buttons */}
       {geoReady &&
         buttons.map((b, i) => {
-          const tgt = geo!.targets[i]; // durch geoReady garantiert vorhanden
+          const tgt = geo!.targets[i];
           const isHoveredDim = hoverIdx !== null && hoverIdx !== i && selectedIdx === null;
           const opacity = selectedIdx === null ? (isHoveredDim ? 0.3 : 1) : (selectedIdx === i ? 1 : 0);
           const transform =
@@ -447,7 +450,7 @@ export default function DashboardPage() {
           );
         })}
 
-      {/* Debug-Overlay */}
+      {/* Debug-Overlay (aktiv mit ?debug=1) */}
       {debug && (
         <div
           style={{

@@ -1,6 +1,9 @@
 // src/app/dashboard/page.tsx
 "use client";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -50,7 +53,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Debug-Flag (statt useSearchParams)
+  // Debug-Flag über window.location (kein useSearchParams)
   const [debug, setDebug] = useState(false);
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -73,7 +76,7 @@ export default function DashboardPage() {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
-  // Voller Button-Katalog (Sichtbarkeit pro Rolle)
+  // Buttons (Katalog)
   const allButtons: Btn[] = useMemo(
     () => [
       {
@@ -83,7 +86,7 @@ export default function DashboardPage() {
         color: "#0B5ED7",
         icon: <span aria-hidden>📅</span>,
         angleDeg: -30,
-        visibleFor: ["personal", "disp", "admin"], // personal sieht diesen
+        visibleFor: ["personal", "disp", "admin"],
       },
       {
         key: "dispo",
@@ -127,7 +130,7 @@ export default function DashboardPage() {
         color: "#111827",
         icon: <span aria-hidden>🚪</span>,
         angleDeg: -155,
-        visibleFor: ["personal", "disp", "admin"], // Logout für alle sichtbar
+        visibleFor: ["personal", "disp", "admin"],
         onClick: async () => {
           await signOut(auth);
           router.replace("/");
@@ -137,7 +140,7 @@ export default function DashboardPage() {
     [router]
   );
 
-  // Gefilterte Buttons nach Rolle
+  // Sichtbare Buttons nach Rolle
   const buttons = useMemo(
     () => allButtons.filter((b) => b.visibleFor.includes(role)),
     [allButtons, role]

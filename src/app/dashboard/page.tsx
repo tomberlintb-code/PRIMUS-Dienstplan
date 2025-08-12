@@ -1,199 +1,279 @@
 // src/app/dashboard/page.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 
-type Btn = { id: string; label: string; href: string; color: string; icon: string };
-const BUTTONS: Btn[] = [
-  { id: "dienst",   label: "Dienstplan", href: "#", color: "#2563EB", icon: "📅" },
-  { id: "urlaub",   label: "Urlaub",     href: "#", color: "#059669", icon: "🏖️" },
-  { id: "personal", label: "Personal",   href: "#", color: "#7C3AED", icon: "👥" },
-  { id: "archiv",   label: "Archiv",     href: "#", color: "#D97706", icon: "📦" },
-  { id: "logout",   label: "Logout",     href: "#", color: "#DC2626", icon: "⏻" },
-];
+type Btn = {
+  label: string;
+  route?: string;
+  onClick?: () => Promise<void> | void;
+  color: string;
+  icon: JSX.Element;
+  angleDeg: number; // 0° = rechts, 90° = unten
+};
 
-// „ungeordnete“ Grundpositionen in %
-const POS = [
-  { top: 14, left: 22 },
-  { top: 22, left: 70 },
-  { top: 68, left: 18 },
-  { top: 76, left: 72 },
-  { top: 42, left: 86 },
-];
-
-type PathDesc = { d: string };
+type Geo = {
+  cx: number;
+  cy: number;
+  targets: { x: number; y: number; len: number }[];
+};
 
 export default function DashboardPage() {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const logoRef = useRef<HTMLDivElement | null>(null);
-  const btnRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const [paths, setPaths] = useState<PathDesc[]>([]);
-  const [hovered, setHovered] = useState<string | null>(null);
 
-  // robuster Logout mit hartem Reload → Login wie beim Kaltstart
-  const handleLogout = async (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    try {
-      await signOut(auth);
-    } catch {
-      /* ignore */
-    } finally {
-      try {
-        sessionStorage.clear();
-        localStorage.clear();
-      } catch {}
-      // Zielroute: Root oder /login – nimm die, die du beim App-Start verwendest
-      window.location.replace("/"); // ggf. auf "/login" ändern
-    }
-  };
+  const [geo, setGeo] = useState<Geo | null>(null);
+  const [revealedCount, setRevealedCount] = useState(0);
+  const [animateOnce, setAnimateOnce] = useState(false);
 
-  // Bezierpfad (bis zum Button)
-  const makePath = (ax: number, ay: number, bx: number, by: number): string => {
-    const cx = (ax + bx) / 2;
-    const cy = (ay + by) / 2 - 40; // leichter Schwung
-    return `M ${ax} ${ay} Q ${cx} ${cy}, ${bx} ${by}`;
-  };
+  const buttons: Btn[] = useMemo(
+    () => [
+      { label: "Dienst/Urlaub", route: "/dienst-urlaub", color: "#0B5ED7", icon: <span>📅</span>, angleDeg: -30 },
+      { label: "Personalabteilung", route: "/personal", color: "#E10600", icon: <span>👥</span>, angleDeg: -100 },
+      { label: "Konfiguration", route: "/konfiguration", color: "#0A7D4F", icon: <span>⚙️</span>, angleDeg: 20 },
+      { label: "Archiv", route: "/archiv", color: "#F59E0B", icon: <span>📂</span>, angleDeg: 75 },
+      { label: "Disposition", route: "/disposition", color: "#8B5CF6", icon: <span>🗂️</span>, angleDeg: 140 },
+      {
+        label: "Logout",
+        color: "#111827",
+        icon: <span>🚪</span>,
+        angleDeg: -155,
+        onClick: async () => {
+          await signOut(auth);
+          router.replace("/");
+        },
+      },
+    ],
+    [router]
+  );
 
-  // Pfade anhand realer DOM-Positionen berechnen
-  const compute = () => {
-    const cont = containerRef.current, logo = logoRef.current;
-    if (!cont || !logo) return;
-
-    const c = cont.getBoundingClientRect();
-    const L = logo.getBoundingClientRect();
-    const aX = L.left - c.left + L.width / 2;
-    const aY = L.top  - c.top  + L.height / 2;
-
-    const newPaths: PathDesc[] = [];
-    btnRefs.current.forEach((el) => {
-      if (!el) return;
-      const b = el.getBoundingClientRect();
-      const bX = b.left - c.left + b.width / 2;
-      const bY = b.top  - c.top  + b.height / 2;
-      newPaths.push({ d: makePath(aX, aY, bX, bY) });
-    });
-    setPaths(newPaths);
-  };
-
+  // Nur beim ersten Laden der Seite animieren
   useEffect(() => {
-    compute();
-    const ro = new ResizeObserver(() => compute());
-    if (containerRef.current) ro.observe(containerRef.current);
-    window.addEventListener("resize", compute, { passive: true });
-    window.addEventListener("scroll", compute, { passive: true });
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", compute);
-      window.removeEventListener("scroll", compute);
-    };
+    const shown = typeof window !== "undefined" && sessionStorage.getItem("brainstormShown") === "1";
+    setAnimateOnce(!shown);
   }, []);
 
+  // Geometrie berechnen (Logo Center, Buttons im Kreis)
+  useEffect(() => {
+    const c = containerRef.current;
+    if (!c) return;
+
+    const recompute = () => {
+      const w = c.clientWidth;
+      const h = c.clientHeight;
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = Math.min(w, h) * 0.30;
+
+      const targets = buttons.map((b) => {
+        const rad = (b.angleDeg * Math.PI) / 180;
+        const x = cx + radius * Math.cos(rad);
+        const y = cy + radius * Math.sin(rad);
+        const len = Math.hypot(x - cx, y - cy);
+        return { x, y, len };
+      });
+
+      setGeo({ cx, cy, targets });
+    };
+
+    recompute();
+    const onResize = () => recompute();
+    window.addEventListener("resize", onResize, { passive: true });
+    return () => window.removeEventListener("resize", onResize);
+  }, [buttons]);
+
+  // Linien nacheinander sichtbar machen
+  useEffect(() => {
+    if (!geo) return;
+
+    if (!animateOnce) {
+      setRevealedCount(buttons.length);
+      return;
+    }
+
+    setRevealedCount(0);
+    let i = 0;
+    const stepMs = 350;
+    const timer = window.setInterval(() => {
+      i += 1;
+      setRevealedCount(i);
+      if (i >= buttons.length) {
+        window.clearInterval(timer);
+        sessionStorage.setItem("brainstormShown", "1");
+      }
+    }, stepMs);
+    return () => window.clearInterval(timer);
+  }, [geo, animateOnce, buttons.length]);
+
+  // Navigation
+  function handleClick(b: Btn) {
+    if (b.onClick) b.onClick();
+    else if (b.route) router.push(b.route);
+  }
+
   return (
-    <div ref={containerRef} style={styles.container}>
-      {/* rundes, langsam pulsierendes Logo */}
-      <motion.div
-        ref={logoRef}
-        style={styles.logoWrap}
-        animate={{ scale: [1, 1.04, 1] }}
-        transition={{ duration: 2.6, repeat: Infinity }}
-      >
-        <img src="/logo.png" alt="Logo" style={styles.logoImg} />
-      </motion.div>
+    <main
+      ref={containerRef}
+      style={{
+        position: "relative",
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #0b3a92, #0a2f76)",
+        overflow: "hidden",
+      }}
+    >
+      {/* SVG: Linien + sanfter Glow + Glitzer-Funken */}
+      {geo && (
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+          <defs>
+            {/* Weicher Glow um die weißen Linien */}
+            <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-      {/* Buttons (Icon + Text, farbig) */}
-      {BUTTONS.map((btn, i) => (
-        <a
-          key={btn.id}
-          ref={(el) => { btnRefs.current[i] = el; }}
-          href={btn.href}
-          onClick={btn.id === "logout" ? handleLogout : undefined}
+          {geo.targets.map((t, i) => {
+            const dash = Math.max(t.len, 1);
+
+            return (
+              <g key={i}>
+                {/* Hauptlinie */}
+                <line
+                  x1={geo.cx}
+                  y1={geo.cy}
+                  x2={t.x}
+                  y2={t.y}
+                  stroke="#ffffff"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  filter="url(#softGlow)"
+                  style={{
+                    strokeDasharray: dash,
+                    strokeDashoffset: i < revealedCount ? 0 : dash,
+                    transition: animateOnce ? "stroke-dashoffset 360ms ease-out" : "none",
+                  }}
+                />
+                {/* Kleiner Glitzer-Funken am Button-Ende – dezent */}
+                {i < revealedCount && animateOnce && (
+                  <g>
+                    {/* Kernblitz */}
+                    <circle cx={t.x} cy={t.y} r={0} fill="#ffffff" opacity={0.95}>
+                      <animate attributeName="r" from="0" to="4" dur="0.16s" begin="0s" fill="freeze" />
+                      <animate attributeName="opacity" from="0.95" to="0" dur="0.26s" begin="0.16s" fill="freeze" />
+                    </circle>
+                    {/* 3 kleine Partikel, die kurz „aufspringen“ */}
+                    <circle cx={t.x + 2} cy={t.y - 2} r="0.8" fill="#ffffff">
+                      <animate attributeName="cx" from={t.x + 2} to={t.x + 8} dur="0.28s" begin="0.06s" fill="freeze" />
+                      <animate attributeName="cy" from={t.y - 2} to={t.y - 6} dur="0.28s" begin="0.06s" fill="freeze" />
+                      <animate attributeName="opacity" from="1" to="0" dur="0.28s" begin="0.06s" fill="freeze" />
+                    </circle>
+                    <circle cx={t.x - 1} cy={t.y + 1} r="0.8" fill="#ffffff">
+                      <animate attributeName="cx" from={t.x - 1} to={t.x - 6} dur="0.28s" begin="0.06s" fill="freeze" />
+                      <animate attributeName="cy" from={t.y + 1} to={t.y + 4} dur="0.28s" begin="0.06s" fill="freeze" />
+                      <animate attributeName="opacity" from="1" to="0" dur="0.28s" begin="0.06s" fill="freeze" />
+                    </circle>
+                    <circle cx={t.x + 1} cy={t.y + 2} r="0.8" fill="#ffffff">
+                      <animate attributeName="cx" from={t.x + 1} to={t.x + 5} dur="0.28s" begin="0.06s" fill="freeze" />
+                      <animate attributeName="cy" from={t.y + 2} to={t.y + 6} dur="0.28s" begin="0.06s" fill="freeze" />
+                      <animate attributeName="opacity" from="1" to="0" dur="0.28s" begin="0.06s" fill="freeze" />
+                    </circle>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      )}
+
+      {/* Mittiges, rundes, sanft pulsierendes Logo */}
+      {geo && (
+        <div
           style={{
-            ...styles.btn,
-            top: `${POS[i].top}%`,
-            left: `${POS[i].left}%`,
-            background: btn.color,
-            opacity: hovered === null || hovered === btn.id ? 1 : 0.35,
-            filter: hovered === null || hovered === btn.id ? "none" : "grayscale(60%)",
+            position: "absolute",
+            left: geo.cx,
+            top: geo.cy,
+            transform: "translate(-50%, -50%)",
+            width: 120,
+            height: 120,
+            borderRadius: "50%",
+            overflow: "hidden",
+            background: "#fff",
+            boxShadow: "0 18px 36px rgba(0,0,0,0.18), 0 6px 16px rgba(0,0,0,0.16)",
+            animation: "primusPulse 4.8s ease-in-out infinite",
           }}
-          onMouseEnter={() => setHovered(btn.id)}
-          onMouseLeave={() => setHovered(null)}
         >
-          <span style={styles.icon}>{btn.icon}</span>
-          <span>{btn.label}</span>
-        </a>
-      ))}
-
-      {/* Weiße Bezierkurven – nacheinander bis zu den Buttons */}
-      <svg style={styles.svg} width="100%" height="100%">
-        {paths.map((p, i) => (
-          <motion.path
-            key={i}
-            d={p.d}
-            fill="none"
-            stroke="white"
-            strokeWidth={3}
-            strokeOpacity={0.95}
-            strokeLinecap="round"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.9, delay: i * 0.35, ease: "easeOut" }}
+          <Image
+            src="/logo.png"
+            alt="PRIMUS"
+            width={120}
+            height={120}
+            style={{ objectFit: "cover", display: "block" }}
+            priority
           />
-        ))}
-      </svg>
+        </div>
+      )}
 
-      <style jsx>{`
-        a { text-decoration: none; color: #fff; }
-        a:hover { text-decoration: none; }
+      {/* Buttons – farbig, kreisförmig verteilt */}
+      {geo &&
+        buttons.map((b, i) => (
+          <button
+            key={b.label}
+            onClick={() => handleClick(b)}
+            style={{
+              position: "absolute",
+              left: geo.targets[i].x,
+              top: geo.targets[i].y,
+              transform: "translate(-50%, -50%)",
+              padding: "12px 16px",
+              border: "none",
+              borderRadius: 14,
+              background: b.color,
+              color: "#fff",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              boxShadow: "0 10px 22px rgba(0,0,0,0.25)",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              opacity: 1, // Buttons sind sofort sichtbar
+            }}
+            aria-label={b.label}
+            title={b.label}
+          >
+            <span
+              aria-hidden
+              style={{
+                display: "grid",
+                placeItems: "center",
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                background: "rgba(255,255,255,0.18)",
+                flex: "0 0 28px",
+              }}
+            >
+              {b.icon}
+            </span>
+            {b.label}
+          </button>
+        ))}
+
+      {/* Puls-Animation fürs Logo */}
+      <style jsx global>{`
+        @keyframes primusPulse {
+          0% { transform: translate(-50%, -50%) scale(1); }
+          50% { transform: translate(-50%, -50%) scale(1.035); }
+          100% { transform: translate(-50%, -50%) scale(1); }
+        }
       `}</style>
-    </div>
+    </main>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    position: "relative",
-    width: "100%",
-    height: "100vh",
-    background: "#0E3A8A", // sattes Blau
-    overflow: "hidden",
-  },
-  logoWrap: {
-    position: "absolute",
-    left: "50%",
-    top: "50%",
-    transform: "translate(-50%, -50%)",
-    zIndex: 3,
-  },
-  logoImg: {
-    width: 140,
-    height: 140,
-    objectFit: "cover",
-    borderRadius: "50%", // rund
-    background: "#fff",
-    boxShadow: "0 8px 18px rgba(0,0,0,0.35)",
-  },
-  btn: {
-    position: "absolute",
-    zIndex: 4,
-    padding: "12px 16px",
-    borderRadius: 14,
-    boxShadow: "0 8px 18px rgba(0,0,0,0.25)",
-    transform: "translate(-50%, -50%)",
-    fontWeight: 700,
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 10,
-    userSelect: "none",
-    cursor: "pointer",
-  },
-  icon: { fontSize: 18, lineHeight: 1 },
-  svg: {
-    position: "absolute",
-    inset: 0,
-    zIndex: 2,
-    pointerEvents: "none",
-  },
-};

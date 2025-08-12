@@ -1,82 +1,132 @@
+// src/app/login/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword, onAuthStateChanged, User } from "firebase/auth";
+import { useState } from "react";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../lib/firebase";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // Auth-Check beim Start
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-      if (currentUser) {
-        router.push("/dashboard");
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message);
+      setError("Login fehlgeschlagen. Bitte überprüfe deine Zugangsdaten.");
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-blue-900 text-white text-lg">
-        Lade Benutzerstatus...
-      </div>
-    );
-  }
-
-  if (user) {
-    return null; // falls schon eingeloggt → kein Formular mehr rendern
-  }
-
   return (
-    <div className="flex h-screen items-center justify-center bg-blue-900">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white p-6 rounded-lg shadow-lg w-80"
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #0b3a92, #0a2f76)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        paddingTop: "40px",
+      }}
+    >
+      {/* Schriftzug mittig zwischen Oberkante und Login-Box */}
+      <h1
+        style={{
+          fontSize: "2rem",
+          color: "#fff",
+          textAlign: "center",
+          marginBottom: "40px",
+          textShadow: "2px 2px 6px rgba(0,0,0,0.4)",
+        }}
       >
-        <h1 className="text-xl font-bold mb-4">Login</h1>
-        {error && <p className="text-red-500 mb-2">{error}</p>}
-        <input
-          type="email"
-          placeholder="E-Mail"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 w-full mb-3"
-        />
-        <input
-          type="password"
-          placeholder="Passwort"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 w-full mb-3"
-        />
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded w-full"
-        >
-          Einloggen
-        </button>
-      </form>
-    </div>
+        Einsatz- und Urlaubsplanung
+      </h1>
+
+      {/* Login-Box */}
+      <div
+        style={{
+          background: "rgba(255,255,255,0.1)",
+          padding: "30px",
+          borderRadius: "12px",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+          backdropFilter: "blur(8px)",
+          width: "100%",
+          maxWidth: "350px",
+        }}
+      >
+        {/* Logo über dem Formular */}
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          <Image
+            src="/logo.png"
+            alt="PRIMUS"
+            width={80}
+            height={80}
+            style={{
+              borderRadius: "50%",
+              objectFit: "cover",
+            }}
+          />
+        </div>
+
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="E-Mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginBottom: "10px",
+              borderRadius: "6px",
+              border: "none",
+              outline: "none",
+            }}
+          />
+          <input
+            type="password"
+            placeholder="Passwort"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginBottom: "15px",
+              borderRadius: "6px",
+              border: "none",
+              outline: "none",
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "6px",
+              border: "none",
+              background: "#0B5ED7",
+              color: "#fff",
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            Anmelden
+          </button>
+        </form>
+
+        {error && (
+          <p style={{ color: "#ffbaba", marginTop: "10px", textAlign: "center" }}>
+            {error}
+          </p>
+        )}
+      </div>
+    </main>
   );
 }

@@ -4,21 +4,20 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserRole } from "../../lib/useUserRole";
 
-const ALLOWED: Array<"admin" | "disp"> = ["admin", "disp"];
-
 export default function PersonalPage() {
   const router = useRouter();
   const { user, role, loading } = useUserRole();
-  const canWrite = role === "admin" || role === "disp";
+  const allowed = role === "admin" || role === "disp";
+  const canWrite = allowed;
 
   useEffect(() => {
     if (!loading) {
       if (!user) router.replace("/");
-      else if (!ALLOWED.includes(role)) router.replace("/dashboard");
+      else if (!allowed) router.replace("/dashboard");
     }
-  }, [loading, user, role, router]);
+  }, [loading, user, allowed, router]);
 
-  if (loading || !user || !ALLOWED.includes(role)) {
+  if (loading || !user || !allowed) {
     return <main style={center}>Lade…</main>;
   }
 
@@ -34,7 +33,7 @@ export default function PersonalPage() {
   );
 }
 
-/* UI-Helfer (wie oben) */
+/* UI-Helfer */
 const wrap: React.CSSProperties = { padding: 24, maxWidth: 980, margin: "0 auto" };
 const center: React.CSSProperties = { minHeight: "100vh", display: "grid", placeItems: "center" };
 const lead: React.CSSProperties = { fontSize: 18, fontWeight: 700, margin: 0, color: "#0f172a" };

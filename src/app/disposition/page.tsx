@@ -4,21 +4,20 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserRole } from "../../lib/useUserRole";
 
-const ALLOWED: Array<"admin" | "disp"> = ["admin", "disp"];
-
 export default function DispositionPage() {
   const router = useRouter();
   const { user, role, loading } = useUserRole();
-  const canWrite = role === "admin" || role === "disp";
+  const allowed = role === "admin" || role === "disp";
+  const canWrite = allowed;
 
   useEffect(() => {
     if (!loading) {
       if (!user) router.replace("/");
-      else if (!ALLOWED.includes(role)) router.replace("/dashboard");
+      else if (!allowed) router.replace("/dashboard");
     }
-  }, [loading, user, role, router]);
+  }, [loading, user, allowed, router]);
 
-  if (loading || !user || !ALLOWED.includes(role)) {
+  if (loading || !user || !allowed) {
     return <main style={center}>Lade…</main>;
   }
 

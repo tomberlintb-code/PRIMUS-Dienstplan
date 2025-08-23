@@ -1,0 +1,18 @@
+.container {
+  padding: 20px;
+}
+
+.planung {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-top: 20px;
+}
+
+.exportButton {
+  margin-top: 20px;
+  padding: 8px 16px;
+  background-color: #093d9e;
+  color: white;
+  border: none;
+  cursor: pointer;
+}

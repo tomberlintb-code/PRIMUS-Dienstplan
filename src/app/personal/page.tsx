@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useUserRole } from "../../lib/useUserRole";
+import useUserRole from "../../lib/useUserRole";
 
 export default function PersonalPage() {
   const router = useRouter();

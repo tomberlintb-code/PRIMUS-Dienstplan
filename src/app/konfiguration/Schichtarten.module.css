@@ -1,0 +1,15 @@
+.container {
+  padding: 20px;
+}
+
+.input {
+  margin-bottom: 10px;
+}
+
+.button {
+  background-color: #093d9e;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+}

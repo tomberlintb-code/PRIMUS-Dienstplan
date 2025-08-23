@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useUserRole } from "../../lib/useUserRole";
+import useUserRole from "../../lib/useUserRole";
 
 export default function ArchivPage() {
   const router = useRouter();

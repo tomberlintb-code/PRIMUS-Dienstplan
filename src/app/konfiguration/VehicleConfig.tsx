@@ -9,7 +9,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import styles from "./schichtarten.module.css";
+import styles from "./Schichtarten.module.css";
 
 interface Vehicle {
   id: string;

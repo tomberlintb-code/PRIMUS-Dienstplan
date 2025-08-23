@@ -1,20 +1,10 @@
-// src/app/layout.tsx
-import '../styles/globals.css'
-import type { Metadata } from 'next';
+import './globals.css'
+import { ReactNode } from 'react'
 
-export const metadata: Metadata = {
-  title: 'PRIMUS Einsatzplanung',
-  description: 'Login & Dashboard',
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="de">
       <body>{children}</body>
     </html>
-  );
+  )
 }

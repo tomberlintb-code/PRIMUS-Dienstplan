@@ -1,0 +1,70 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #0b3d91; /* Blau */
+  color: white;
+  text-align: center;
+}
+
+.greeting {
+  margin-bottom: 40px;
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.centerWrapper {
+  position: relative;
+  width: 600px;
+  height: 600px;
+}
+
+.logoWrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 3s infinite;
+}
+
+.logo {
+  width: 200px;       /* Größe kannst du anpassen */
+  height: 200px;
+  border-radius: 50%; /* macht es rund */
+  object-fit: cover;  /* sorgt dafür, dass das Bild sauber reinpasst */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); /* kleiner Schatten für Tiefe */
+  margin: 20px auto;  /* mittig */
+  display: block;
+}
+
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.05); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.buttonsWrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+}
+
+.button {
+  position: absolute;
+  min-width: 120px;
+  min-height: 45px;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, background-color 0.3s;
+}
+
+.button:hover {
+  transform: scale(1.1);
+}

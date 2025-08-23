@@ -1,132 +1,163 @@
-// src/app/login/page.tsx
 "use client";
 
-import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../lib/firebase";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { useRouter, useSearchParams } from "next/navigation";
+import { auth, db } from "@/lib/firebase";
 import Image from "next/image";
+
+type Role = "user" | "admin" | "superadmin";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const redirectTarget = searchParams.get("r") || "/dashboard";
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const role = await fetchAndPersistRole(user.uid);
+          if (role !== "none") {
+            router.replace(redirectTarget);
+          } else {
+            setError("Keine gültige Rolle hinterlegt.");
+          }
+        } catch (e) {
+          console.error("🔥 Fehler beim Rollenabruf:", e);
+          setError("Rollenprüfung fehlgeschlagen.");
+        }
+      }
+    });
+    return () => unsub();
+  }, [redirectTarget, router]);
+
+  async function fetchAndPersistRole(uid: string): Promise<Role | "none"> {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard");
-    } catch (err: any) {
-      setError("Login fehlgeschlagen. Bitte überprüfe deine Zugangsdaten.");
+      const snap = await getDoc(doc(db, "users", uid));
+      const role = (snap.exists() ? (snap.data().role as Role) : "none") || "none";
+
+      await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+
+      return role;
+    } catch (err) {
+      console.error("⚠️ fetchAndPersistRole Error:", err);
+      return "none";
     }
-  };
+  }
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    console.log("🔑 Login-Versuch mit:", email, password);
+
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+      console.log("✅ Firebase Login erfolgreich:", cred.user.uid);
+
+      const role = await fetchAndPersistRole(cred.user.uid);
+      if (role === "none") {
+        setError("Keine gültige Rolle hinterlegt.");
+        await signOut(auth);
+        return;
+      }
+
+      router.replace(redirectTarget);
+    } catch (err: any) {
+      console.error("❌ Login fehlgeschlagen:", err.code, err.message);
+      setError(`Login fehlgeschlagen: ${err.code || "unbekannt"}`);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <main
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #0b3a92, #0a2f76)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        paddingTop: "40px",
+        display: "grid",
+        placeItems: "center",
+        background: "#093d9e",
+        color: "white",
+        padding: "2rem",
       }}
     >
-      {/* Schriftzug mittig zwischen Oberkante und Login-Box */}
-      <h1
+      <form
+        onSubmit={handleLogin}
         style={{
-          fontSize: "2rem",
-          color: "#fff",
-          textAlign: "center",
-          marginBottom: "40px",
-          textShadow: "2px 2px 6px rgba(0,0,0,0.4)",
-        }}
-      >
-        Einsatz- und Urlaubsplanung
-      </h1>
-
-      {/* Login-Box */}
-      <div
-        style={{
-          background: "rgba(255,255,255,0.1)",
-          padding: "30px",
-          borderRadius: "12px",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
-          backdropFilter: "blur(8px)",
+          background: "rgba(255,255,255,0.08)",
+          borderRadius: "16px",
+          padding: "2rem",
           width: "100%",
-          maxWidth: "350px",
+          maxWidth: 400,
+          textAlign: "center",
         }}
       >
-        {/* Logo über dem Formular */}
-        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+        {/* Logo */}
+        <div style={{ marginBottom: "1.5rem" }}>
           <Image
             src="/logo.png"
-            alt="PRIMUS"
-            width={80}
-            height={80}
-            style={{
-              borderRadius: "50%",
-              objectFit: "cover",
-            }}
+            alt="PRIMUS Logo"
+            width={100}
+            height={100}
+            priority
           />
         </div>
 
-        <form onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="E-Mail"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{
-              width: "100%",
-              padding: "10px",
-              marginBottom: "10px",
-              borderRadius: "6px",
-              border: "none",
-              outline: "none",
-            }}
-          />
-          <input
-            type="password"
-            placeholder="Passwort"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{
-              width: "100%",
-              padding: "10px",
-              marginBottom: "15px",
-              borderRadius: "6px",
-              border: "none",
-              outline: "none",
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              width: "100%",
-              padding: "10px",
-              borderRadius: "6px",
-              border: "none",
-              background: "#0B5ED7",
-              color: "#fff",
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
-          >
-            Anmelden
-          </button>
-        </form>
+        <h1 style={{ marginBottom: "1rem", fontSize: "1.5rem" }}>PRIMUS – Login</h1>
+
+        <input
+          type="email"
+          placeholder="E-Mail"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{ width: "100%", marginBottom: "1rem", padding: "0.75rem", borderRadius: 8, color: "#111" }}
+        />
+
+        <input
+          type="password"
+          placeholder="Passwort"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          style={{ width: "100%", marginBottom: "1rem", padding: "0.75rem", borderRadius: 8, color: "#111" }}
+        />
 
         {error && (
-          <p style={{ color: "#ffbaba", marginTop: "10px", textAlign: "center" }}>
+          <div style={{ marginBottom: "1rem", color: "#ffcccc" }}>
             {error}
-          </p>
+          </div>
         )}
-      </div>
+
+        <button
+          type="submit"
+          disabled={busy}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            borderRadius: "8px",
+            border: "none",
+            background: busy ? "#7c93d6" : "white",
+            color: "#093d9e",
+            fontWeight: 700,
+            cursor: busy ? "not-allowed" : "pointer",
+          }}
+        >
+          {busy ? "Anmelden…" : "Anmelden"}
+        </button>
+      </form>
     </main>
   );
 }

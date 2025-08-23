@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import styles from "./dashboard.module.css";
+import styles from "../dashboard/dashboard.module.css"
 
 export default function Dashboard() {
   const [userName, setUserName] = useState<string>("");

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged, User, signOut } from "firebase/auth";
-import {
+import { useState, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import useUserRole from "@/lib/useUserRole";
+import { collection, getDocs } from "firebase/firestore";
+import styles from "./planung.module.css";
   addDoc,
   collection,
   deleteDoc,
@@ -19,8 +20,8 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { auth, db } from "../../../lib/firebase";
-import { useUserRole } from "../../../lib/useUserRole";
+import { db } from "@/lib/firebase"
+import useUserRole from "@/lib/useUserRole"
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 

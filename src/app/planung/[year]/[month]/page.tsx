@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   addDoc,
@@ -11,10 +11,7 @@ import {
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
-  Timestamp,
   updateDoc,
-  where,
 } from "firebase/firestore";
 import { db } from "../../../../lib/firebase";
 import useUserRole from "../../../../lib/useUserRole";
@@ -22,40 +19,33 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import styles from "./planung.module.css";
 
-
-export default function MonatsPlanungPage() {
-  const [schichten, setSchichten] = useState<any[]>([]);
+export default function PlanungPage() {
+  const router = useRouter();
+  const { role } = useUserRole();
+  const [shifts, setShifts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const userRole = useUserRole();
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const q = query(collection(db, "dienstplan"));
-        const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setSchichten(data);
-      } catch (error) {
-        console.error("Fehler beim Laden der Schichten:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const q = query(collection(db, "shifts"), orderBy("date", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setShifts(data);
+      setLoading(false);
+    });
 
-    fetchData();
+    return () => unsubscribe();
   }, []);
 
-  const exportPDF = async () => {
-    const input = document.getElementById("planung-container");
-    if (!input) return;
-
-    const canvas = await html2canvas(input);
+  const exportToPDF = async () => {
+    if (!pdfRef.current) return;
+    const canvas = await html2canvas(pdfRef.current);
     const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const imgProps = (pdf as any).getImageProperties(imgData);
+    const pdf = new jsPDF("landscape", "mm", "a4");
+    const imgProps = pdf.getImageProperties(imgData);
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
     pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
@@ -63,32 +53,45 @@ export default function MonatsPlanungPage() {
   };
 
   if (loading) {
-    return <p>Lade Schichten...</p>;
+    return <p>Lade Dienstplan...</p>;
   }
 
   return (
     <div className={styles.container}>
-      <h1>Dienstplan Monatsansicht</h1>
-
-      <div id="planung-container" className={styles.planung}>
-        {schichten.length === 0 ? (
-          <p>Keine Schichten gefunden.</p>
-        ) : (
-          <ul>
-            {schichten.map((schicht) => (
-              <li key={schicht.id}>
-                {schicht.datum} – {schicht.typ} – {schicht.mitarbeiter}
-              </li>
+      <h1>Dienstplan</h1>
+      <div ref={pdfRef}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Schicht</th>
+              <th>Mitarbeiter</th>
+              {role === "admin" && <th>Aktionen</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {shifts.map((shift) => (
+              <tr key={shift.id}>
+                <td>{shift.date}</td>
+                <td>{shift.type}</td>
+                <td>{shift.employee}</td>
+                {role === "admin" && (
+                  <td>
+                    <button
+                      onClick={async () =>
+                        await deleteDoc(doc(db, "shifts", shift.id))
+                      }
+                    >
+                      Löschen
+                    </button>
+                  </td>
+                )}
+              </tr>
             ))}
-          </ul>
-        )}
+          </tbody>
+        </table>
       </div>
-
-      {userRole === "admin" && (
-        <button onClick={exportPDF} className={styles.exportButton}>
-          PDF Exportieren
-        </button>
-      )}
+      <button onClick={exportToPDF}>Als PDF exportieren</button>
     </div>
   );
 }

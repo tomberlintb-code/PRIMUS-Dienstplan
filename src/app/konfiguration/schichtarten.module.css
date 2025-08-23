@@ -1,123 +1,15 @@
 .container {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 2rem;
-  padding: 2rem;
-  font-family: Arial, sans-serif;
+  padding: 20px;
 }
 
-/* Fenster-Style für Formular */
-.formBox {
-  flex: 1;
-  background: #ffffff;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  min-width: 320px;
+.input {
+  margin-bottom: 10px;
 }
 
-.formBox h2 {
-  margin-bottom: 1rem;
-  font-size: 1.4rem;
-  color: #093d9e;
-}
-
-.formBox label,
-.formBox fieldset {
-  display: block;
-  margin-bottom: 1rem;
-  font-size: 0.95rem;
-}
-
-.formBox input[type="text"],
-.formBox input[type="number"],
-.formBox input[type="time"],
-.formBox input[type="color"] {
-  width: 100%;
-  padding: 0.5rem;
-  margin-top: 0.25rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
-
-.formBox fieldset {
+.button {
+  background-color: #093d9e;
+  color: white;
   border: none;
-  padding: 0;
-}
-
-.checkboxLabel {
-  display: inline-block;
-  margin-right: 0.75rem;
-  font-size: 0.85rem;
-}
-
-.formBox button {
-  background: #093d9e;
-  color: #fff;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
+  padding: 8px 16px;
   cursor: pointer;
-  font-weight: bold;
-  transition: background 0.3s ease;
-}
-
-.formBox button:hover {
-  background: #072f7d;
-}
-
-/* Fenster-Style für Übersicht */
-.listBox {
-  flex: 1;
-  background: #f9f9f9;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  min-width: 320px;
-}
-
-.listBox h3 {
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
-  color: #333;
-}
-
-.listBox ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.listBox li {
-  background: #fff;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.8rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  border-left: 6px solid #2196f3; /* überschrieben durch inline style */
-}
-
-.actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.3rem;
-}
-
-.actions button {
-  background: transparent;
-  border: none;
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 0.2rem 0.4rem;
-  border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-.actions button:hover {
-  background: rgba(0, 0, 0, 0.05);
 }

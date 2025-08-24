@@ -13,8 +13,8 @@ import {
   query,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "../../../../lib/firebase";
-import useUserRole from "../../../../lib/useUserRole";
+import useUserRole from "../../../lib/useUserRole";
+import { db } from "../../../lib/firebase";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import styles from "./planung.module.css";

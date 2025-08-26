@@ -1,163 +1,80 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
-import Image from "next/image";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
-type Role = "user" | "admin" | "superadmin";
-
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectTarget = searchParams.get("r") || "/dashboard";
-
+  // Redirect wenn schon eingeloggt
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        try {
-          const role = await fetchAndPersistRole(user.uid);
-          if (role !== "none") {
-            router.replace(redirectTarget);
-          } else {
-            setError("Keine gültige Rolle hinterlegt.");
-          }
-        } catch (e) {
-          console.error("🔥 Fehler beim Rollenabruf:", e);
-          setError("Rollenprüfung fehlgeschlagen.");
-        }
+        router.push("/dashboard");
       }
     });
-    return () => unsub();
-  }, [redirectTarget, router]);
+    return () => unsubscribe();
+  }, [router]);
 
-  async function fetchAndPersistRole(uid: string): Promise<Role | "none"> {
-    try {
-      const snap = await getDoc(doc(db, "users", uid));
-      const role = (snap.exists() ? (snap.data().role as Role) : "none") || "none";
-
-      await fetch("/api/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
-
-      return role;
-    } catch (err) {
-      console.error("⚠️ fetchAndPersistRole Error:", err);
-      return "none";
-    }
-  }
-
-  async function handleLogin(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true);
-    setError(null);
-    console.log("🔑 Login-Versuch mit:", email, password);
-
     try {
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-      console.log("✅ Firebase Login erfolgreich:", cred.user.uid);
-
-      const role = await fetchAndPersistRole(cred.user.uid);
-      if (role === "none") {
-        setError("Keine gültige Rolle hinterlegt.");
-        await signOut(auth);
-        return;
-      }
-
-      router.replace(redirectTarget);
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push("/dashboard");
     } catch (err: any) {
-      console.error("❌ Login fehlgeschlagen:", err.code, err.message);
-      setError(`Login fehlgeschlagen: ${err.code || "unbekannt"}`);
-    } finally {
-      setBusy(false);
+      setError("Login fehlgeschlagen: " + err.message);
     }
-  }
+  };
+
+  // Optional: QueryParam z. B. ?error=xyz
+  const queryError = searchParams?.get("error");
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background: "#093d9e",
-        color: "white",
-        padding: "2rem",
-      }}
-    >
-      <form
-        onSubmit={handleLogin}
-        style={{
-          background: "rgba(255,255,255,0.08)",
-          borderRadius: "16px",
-          padding: "2rem",
-          width: "100%",
-          maxWidth: 400,
-          textAlign: "center",
-        }}
-      >
-        {/* Logo */}
-        <div style={{ marginBottom: "1.5rem" }}>
-          <Image
-            src="/logo.png"
-            alt="PRIMUS Logo"
-            width={100}
-            height={100}
-            priority
+    <div className="flex items-center justify-center h-screen bg-[#093d9e]">
+      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
+        {error && <p className="text-red-600 mb-4">{error}</p>}
+        {queryError && <p className="text-red-600 mb-4">{queryError}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="email"
+            placeholder="E-Mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 border rounded"
+            required
           />
-        </div>
+          <input
+            type="password"
+            placeholder="Passwort"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3 py-2 border rounded"
+            required
+          />
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          >
+            Einloggen
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
-        <h1 style={{ marginBottom: "1rem", fontSize: "1.5rem" }}>PRIMUS – Login</h1>
-
-        <input
-          type="email"
-          placeholder="E-Mail"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ width: "100%", marginBottom: "1rem", padding: "0.75rem", borderRadius: 8, color: "#111" }}
-        />
-
-        <input
-          type="password"
-          placeholder="Passwort"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{ width: "100%", marginBottom: "1rem", padding: "0.75rem", borderRadius: 8, color: "#111" }}
-        />
-
-        {error && (
-          <div style={{ marginBottom: "1rem", color: "#ffcccc" }}>
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={busy}
-          style={{
-            width: "100%",
-            padding: "0.75rem",
-            borderRadius: "8px",
-            border: "none",
-            background: busy ? "#7c93d6" : "white",
-            color: "#093d9e",
-            fontWeight: 700,
-            cursor: busy ? "not-allowed" : "pointer",
-          }}
-        >
-          {busy ? "Anmelden…" : "Anmelden"}
-        </button>
-      </form>
-    </main>
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Lade Login…</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

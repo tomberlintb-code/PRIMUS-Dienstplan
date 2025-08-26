@@ -21,7 +21,7 @@ import styles from "./planung.module.css";
 
 export default function PlanungPage() {
   const router = useRouter();
-  const { role } = useUserRole();
+  const role = useUserRole();
   const [shifts, setShifts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const pdfRef = useRef<HTMLDivElement>(null);

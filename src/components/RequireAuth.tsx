@@ -3,55 +3,27 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 
 interface RequireAuthProps {
   children: React.ReactNode;
-  allowedRoles?: string[]; // 👈 optional: wenn angegeben, nur diese Rollen dürfen die Seite sehen
+  allowedRoles?: string[];
 }
 
 export default function RequireAuth({ children, allowedRoles }: RequireAuthProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       console.log("AUTH CHECK:", firebaseUser);
-
-      if (firebaseUser) {
-        setUser(firebaseUser);
-
-        // Rolle aus Firestore laden
-        try {
-          const ref = doc(db, "users", firebaseUser.uid);
-          const snap = await getDoc(ref);
-          if (snap.exists()) {
-            const data = snap.data();
-            console.log("ROLE DATA:", data);
-            setRole(data.role || null);
-          } else {
-            console.warn("Keine Rolle gefunden → User hat keinen Zugriff");
-            setRole(null);
-          }
-        } catch (err) {
-          console.error("Fehler beim Laden der Rolle:", err);
-          setRole(null);
-        }
-      } else {
-        setUser(null);
-        setRole(null);
-      }
-
+      setUser(firebaseUser);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // Solange Firebase noch prüft
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#093d9e] text-white">
@@ -60,21 +32,15 @@ export default function RequireAuth({ children, allowedRoles }: RequireAuthProps
     );
   }
 
-  // Kein User → Login
   if (!user) {
-    router.push("/login");
-    return null;
-  }
-
-  // Rolle prüfen (falls erlaubt)
-  if (allowedRoles && role && !allowedRoles.includes(role)) {
+    // ❌ kein sofortiges router.push mehr
+    // 👉 stattdessen direkt die Login-Seite rendern
     return (
-      <div className="flex items-center justify-center min-h-screen bg-red-700 text-white">
-        <p>Zugriff verweigert – Rolle „{role}“ nicht erlaubt.</p>
+      <div className="flex items-center justify-center min-h-screen bg-[#093d9e] text-white">
+        <p>Bitte <a href="/login" className="underline">einloggen</a>!</p>
       </div>
     );
   }
 
-  // Eingeloggt & Rolle passt
   return <>{children}</>;
 }

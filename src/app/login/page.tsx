@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithEmailAndPassword, onAuthStateChanged, User } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 function LoginForm() {
@@ -13,29 +13,17 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Auth State beobachten
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
-      console.log("AUTH STATE:", user); // 👈 Debug-Ausgabe
-      if (user) {
-        router.push("/dashboard");
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard");
+      router.push("/dashboard"); // 👈 nur nach erfolgreichem Login
     } catch (err: any) {
-      console.error("LOGIN ERROR:", err); // 👈 Debug-Ausgabe
+      console.error("LOGIN ERROR:", err);
       setError("Login fehlgeschlagen: " + err.message);
     }
   };
 
-  // Optional: QueryParam (z. B. ?error=xyz)
   const queryError = searchParams?.get("error");
 
   return (

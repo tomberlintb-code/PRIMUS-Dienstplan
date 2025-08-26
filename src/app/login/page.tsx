@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 function LoginForm() {
@@ -13,9 +13,10 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Redirect wenn schon eingeloggt
+  // Auth State beobachten
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
+      console.log("AUTH STATE:", user); // 👈 Debug-Ausgabe
       if (user) {
         router.push("/dashboard");
       }
@@ -29,19 +30,22 @@ function LoginForm() {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/dashboard");
     } catch (err: any) {
+      console.error("LOGIN ERROR:", err); // 👈 Debug-Ausgabe
       setError("Login fehlgeschlagen: " + err.message);
     }
   };
 
-  // Optional: QueryParam z. B. ?error=xyz
+  // Optional: QueryParam (z. B. ?error=xyz)
   const queryError = searchParams?.get("error");
 
   return (
-    <div className="flex items-center justify-center h-screen bg-[#093d9e]">
+    <div className="flex items-center justify-center min-h-screen bg-[#093d9e]">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
+
         {error && <p className="text-red-600 mb-4">{error}</p>}
         {queryError && <p className="text-red-600 mb-4">{queryError}</p>}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"

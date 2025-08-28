@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  setPersistence,
+  browserLocalPersistence,
+} from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 export default function LoginPage() {
@@ -13,12 +17,18 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🚀 Login attempt with:", email);
     try {
-      // Session im Browser speichern (nicht verlieren nach Redirect)
       await setPersistence(auth, browserLocalPersistence);
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard"); // nach Login weiter
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      console.log("✅ Login success:", userCredential.user);
+      router.push("/dashboard");
     } catch (err: any) {
+      console.error("❌ Login error:", err);
       setError(err.message);
     }
   };
@@ -63,7 +73,9 @@ export default function LoginPage() {
           style={{ padding: "0.5rem", borderRadius: "4px", color: "black" }}
           required
         />
-        {error && <p style={{ color: "red", fontSize: "0.9rem" }}>{error}</p>}
+        {error && (
+          <p style={{ color: "red", fontSize: "0.9rem" }}>{error}</p>
+        )}
         <button
           type="submit"
           style={{

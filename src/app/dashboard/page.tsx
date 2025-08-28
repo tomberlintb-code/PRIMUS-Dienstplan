@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -10,22 +10,23 @@ import Image from "next/image";
 export default function Dashboard() {
   const router = useRouter();
   const [userName, setUserName] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
-  // Auth-Check: bleib eingeloggt oder zurück auf Login
+  // Auth-Check mit Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User ist eingeloggt → Namen aus Firestore laden
+        // Name aus Firestore holen
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setUserName(docSnap.data().name || "");
         }
+        setLoading(false);
       } else {
         router.push("/login"); // nicht eingeloggt → zurück
       }
     });
-
     return () => unsubscribe();
   }, [router]);
 
@@ -33,6 +34,25 @@ export default function Dashboard() {
     await signOut(auth);
     router.push("/login");
   };
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          backgroundColor: "#093d9e",
+          width: "100%",
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white",
+          fontSize: "1.5rem",
+        }}
+      >
+        Lade Dashboard...
+      </div>
+    );
+  }
 
   return (
     <div
@@ -55,7 +75,7 @@ export default function Dashboard() {
           fontWeight: "bold",
         }}
       >
-        Willkommen, {userName || "Gast"}
+        Willkommen, {userName || "Nutzer"}
       </div>
 
       {/* Logo */}
@@ -111,3 +131,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

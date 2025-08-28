@@ -12,25 +12,39 @@ export default function Dashboard() {
   const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  // Auth-Check mit Listener
   useEffect(() => {
+    console.log("🔎 Dashboard mounted – waiting for auth...");
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("🔥 Auth-Listener triggered. User:", user);
+
       if (user) {
-        // Name aus Firestore holen
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setUserName(docSnap.data().name || "");
+        try {
+          const docRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(docRef);
+          console.log("📄 Firestore result:", docSnap.exists(), docSnap.data());
+
+          if (docSnap.exists()) {
+            setUserName(docSnap.data().name || "");
+          } else {
+            console.warn("⚠️ Kein Eintrag in 'users' für UID:", user.uid);
+            setUserName("Unbekannt");
+          }
+        } catch (err) {
+          console.error("❌ Fehler beim Laden von Firestore:", err);
         }
         setLoading(false);
       } else {
-        router.push("/login"); // nicht eingeloggt → zurück
+        console.warn("⚠️ Kein User eingeloggt, redirect auf /login");
+        router.push("/login");
       }
     });
+
     return () => unsubscribe();
   }, [router]);
 
   const handleLogout = async () => {
+    console.log("👋 Logout gestartet");
     await signOut(auth);
     router.push("/login");
   };
@@ -64,7 +78,6 @@ export default function Dashboard() {
         color: "white",
       }}
     >
-      {/* Begrüßung */}
       <div
         style={{
           position: "absolute",
@@ -78,7 +91,6 @@ export default function Dashboard() {
         Willkommen, {userName || "Nutzer"}
       </div>
 
-      {/* Logo */}
       <div
         style={{
           position: "absolute",
@@ -96,7 +108,6 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Logout Button */}
       <button
         onClick={handleLogout}
         style={{
@@ -131,4 +142,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

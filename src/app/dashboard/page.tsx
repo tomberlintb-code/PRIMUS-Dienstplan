@@ -2,82 +2,46 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import Image from "next/image";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [hovered, setHovered] = useState<number | null>(null);
   const [userName, setUserName] = useState<string>("");
-  const containerRef = useRef<HTMLDivElement>(null);
-  const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [positions, setPositions] = useState<{ top: number; left: number }[]>([]);
-  const [geoReady, setGeoReady] = useState(false);
 
-  const buttons = [
-    { id: 1, label: "Dienst/Urlaub", link: "/dienstplan", color: "#2196F3" },
-    { id: 2, label: "Personalabteilung", link: "/personal", color: "#4CAF50" },
-    { id: 3, label: "Konfiguration", link: "/konfiguration", color: "#000000" },
-    { id: 4, label: "Archiv", link: "/archiv", color: "#FF9800" },
-    { id: 5, label: "Logout", link: "/logout", color: "#FF0000" },
-  ];
-
-  // Begrüßung aus Firebase holen
+  // Auth-Check: bleib eingeloggt oder zurück auf Login
   useEffect(() => {
-    const fetchUserName = async () => {
-      const user = auth.currentUser;
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // User ist eingeloggt → Namen aus Firestore laden
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setUserName(docSnap.data().name || "");
         }
+      } else {
+        router.push("/login"); // nicht eingeloggt → zurück
       }
-    };
-    fetchUserName();
-  }, []);
+    });
 
-  // Logout Funktion
+    return () => unsubscribe();
+  }, [router]);
+
   const handleLogout = async () => {
     await signOut(auth);
-    router.push("/");
+    router.push("/login");
   };
-
-  // Button-Positionen im Kreis berechnen
-  useEffect(() => {
-    const computePositions = () => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const radius = 240;
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      const newPositions = buttons.map((_, i) => {
-        const angle = (i / buttons.length) * 2 * Math.PI;
-        return {
-          top: centerY + radius * Math.sin(angle) - 25,
-          left: centerX + radius * Math.cos(angle) - 50,
-        };
-      });
-      setPositions(newPositions);
-      setGeoReady(true);
-    };
-
-    computePositions();
-    window.addEventListener("resize", computePositions);
-    return () => window.removeEventListener("resize", computePositions);
-  }, []);
 
   return (
     <div
-      ref={containerRef}
       style={{
         backgroundColor: "#093d9e",
         width: "100%",
         height: "100vh",
         position: "relative",
-        overflow: "hidden",
+        color: "white",
       }}
     >
       {/* Begrüßung */}
@@ -87,12 +51,11 @@ export default function Dashboard() {
           top: "10%",
           width: "100%",
           textAlign: "center",
-          color: "white",
           fontSize: "1.5rem",
           fontWeight: "bold",
         }}
       >
-        Willkommen, {userName}
+        Willkommen, {userName || "Gast"}
       </div>
 
       {/* Logo */}
@@ -113,41 +76,25 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Buttons */}
-      {geoReady &&
-        buttons.map((btn, i) => {
-          const faded = hovered === btn.id ? "opacity-100" : "opacity-80";
-          return (
-            <button
-              key={btn.id}
-              ref={(el) => {
-                btnRefs.current[i] = el;
-              }} // ✅ Fix hier
-              className={`map-button ${faded}`}
-              style={{
-                position: "absolute",
-                top: positions[i].top,
-                left: positions[i].left,
-                backgroundColor: btn.color,
-                color: "white",
-                padding: "10px 20px",
-                borderRadius: "8px",
-                border: "none",
-                cursor: "pointer",
-                transition: "transform 0.2s",
-              }}
-              onMouseEnter={() => setHovered(btn.id)}
-              onMouseLeave={() => setHovered(null)}
-              onClick={() =>
-                btn.label === "Logout"
-                  ? handleLogout()
-                  : router.push(btn.link)
-              }
-            >
-              {btn.label}
-            </button>
-          );
-        })}
+      {/* Logout Button */}
+      <button
+        onClick={handleLogout}
+        style={{
+          position: "absolute",
+          bottom: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "red",
+          color: "white",
+          padding: "10px 20px",
+          borderRadius: "8px",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Logout
+      </button>
+
       <style jsx global>{`
         @keyframes pulse {
           0% {
